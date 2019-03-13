@@ -1787,25 +1787,31 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
 /* harmony default export */ __webpack_exports__["default"] = ({
-  props: ['users'],
   data: function data() {
     return {
-      edit: false,
-      contact: {
-        id: '',
-        name: '',
-        email: ''
-      },
-      contacts: JSON.parse(this.users)
+      contacts: '',
+      contact: ''
     };
   },
-  mounted: function mounted() {// this.$on('contactnew', function() {
-    //     console.log('something2ß')
-    // })
-    // console.log(this.users)
+  mounted: function mounted() {
+    Bus.$on('fetchallusers', this.showAllUsers());
+  },
+  created: function created() {
+    this.showAllUsers();
   },
   methods: {
+    showAllUsers: function showAllUsers() {
+      var object = this;
+      axios.get('api/user').then(function (response) {
+        if (response.status == 200) {
+          object.contacts = response.data; // console.log(response.data); 
+        }
+      }).catch(function (error) {
+        console.log(error);
+      });
+    },
     createContact: function createContact() {
       Bus.$emit('contactnew');
     },
@@ -1813,7 +1819,15 @@ __webpack_require__.r(__webpack_exports__);
       Bus.$emit('contactedit', contact);
     },
     deleteContact: function deleteContact(contact) {
-      console.log(contact.id);
+      var object = this;
+      axios.delete('/api/user/' + contact.id).then(function (response) {
+        if (response.status == 200) {
+          var index = object.contacts.indexOf(contact);
+          if (index > -1) object.contacts.splice(index, 1);
+        }
+      }).catch(function (error) {
+        console.log(error);
+      });
     },
     test: function test() {
       console.log('test done.');
@@ -1849,17 +1863,20 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony default export */ __webpack_exports__["default"] = ({
   data: function data() {
     return {
-      contact: {
-        name: '',
-        email: ''
-      },
-      createNew: false
+      name: '',
+      email: '',
+      password: '',
+      createNew: false,
+      response: ''
     };
   },
   mounted: function mounted() {
-    var create = this;
+    var object = this;
     Bus.$on('contactnew', function () {
-      create.showContactForm();
+      object.showContactForm();
+    });
+    Bus.$on('contactedit', function (contact) {
+      object.createNew = false;
     });
   },
   created: function created() {},
@@ -1867,9 +1884,24 @@ __webpack_require__.r(__webpack_exports__);
     showContactForm: function showContactForm() {
       this.createNew = true;
     },
-    createContact: function createContact() {
-      // axios.post('/register', contact).then(){}
-      this.test();
+    createContact: function createContact(e) {
+      e.preventDefault();
+      var object = this;
+      var state = Bus;
+      axios.post('api/user', {
+        name: object.name,
+        email: object.email,
+        password: '123456',
+        password_confirmation: '123456'
+      }).then(function (response) {
+        if (response.status == 200) {
+          // location.reload();
+          state.$emit('fetchallusers');
+        } // object.response = response.data;
+
+      }).catch(function (error) {
+        object.response = error;
+      });
     },
     test: function test() {
       console.log('test');
@@ -1905,24 +1937,39 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony default export */ __webpack_exports__["default"] = ({
   data: function data() {
     return {
-      contact: {
-        fname: '',
-        email: ''
-      },
+      id: '',
+      name: '',
+      email: '',
       edit: false
     };
   },
   mounted: function mounted() {
-    var edit = this;
+    var object = this;
     Bus.$on('contactedit', function (contact) {
-      edit.showContactForm(contact);
+      object.showContactForm(contact);
+    });
+    Bus.$on('contactnew', function () {
+      object.edit = false;
     });
   },
   created: function created() {},
   methods: {
     showContactForm: function showContactForm(contact) {
-      this.contact = contact;
+      this.id = contact.id;
+      this.name = contact.name;
+      this.email = contact.email;
       this.edit = true;
+    },
+    editContact: function editContact() {
+      var object = this;
+      axios.put('/api/user/' + this.id, {
+        name: this.name,
+        email: this.email
+      }).then(function (response) {
+        console.log(response.status);
+      }).catch(function (error) {
+        console.log(error);
+      });
     },
     test: function test() {
       console.log('test');
@@ -36979,7 +37026,11 @@ var render = function() {
     { staticClass: "card", staticStyle: { "margin-bottom": "20px" } },
     [
       _c("div", { staticClass: "card-header" }, [
-        _c("span", [_vm._v("Contacts List")]),
+        _c("span", [
+          _vm._v("Contacts List ( "),
+          _c("strong", [_vm._v(_vm._s(_vm.contacts.length))]),
+          _vm._v(" ) ")
+        ]),
         _vm._v(" "),
         _c(
           "button",
@@ -36991,53 +37042,57 @@ var render = function() {
         )
       ]),
       _vm._v(" "),
-      _c("table", { staticClass: "table table-dark table-hover" }, [
-        _vm._m(0),
-        _vm._v(" "),
-        _c(
-          "tbody",
-          _vm._l(_vm.contacts, function(contact) {
-            return _c("tr", { staticStyle: { "margin-bottom": "10px" } }, [
-              _c("td", [_vm._v(_vm._s(contact.name))]),
-              _vm._v(" "),
-              _c("td", [_vm._v(_vm._s(contact.email))]),
-              _vm._v(" "),
-              _c(
-                "td",
-                { staticStyle: { "text-align": "center", width: "150px" } },
-                [
-                  _c(
-                    "button",
-                    {
-                      staticClass: "btn btn-sm btn-info",
-                      on: {
-                        click: function($event) {
-                          return _vm.editContact(contact)
-                        }
-                      }
-                    },
-                    [_vm._v("Edit")]
-                  ),
+      _vm.contacts.length
+        ? _c("table", { staticClass: "table table-dark table-hover" }, [
+            _vm._m(0),
+            _vm._v(" "),
+            _c(
+              "tbody",
+              _vm._l(_vm.contacts, function(contact) {
+                return _c("tr", { staticStyle: { "margin-bottom": "10px" } }, [
+                  _c("td", [_vm._v(_vm._s(contact.name))]),
+                  _vm._v(" "),
+                  _c("td", [_vm._v(_vm._s(contact.email))]),
                   _vm._v(" "),
                   _c(
-                    "button",
-                    {
-                      staticClass: "btn btn-sm btn-danger",
-                      on: {
-                        click: function($event) {
-                          return _vm.deleteContact(contact)
-                        }
-                      }
-                    },
-                    [_vm._v("Delete")]
+                    "td",
+                    { staticStyle: { "text-align": "center", width: "150px" } },
+                    [
+                      _c(
+                        "button",
+                        {
+                          staticClass: "btn btn-sm btn-info",
+                          on: {
+                            click: function($event) {
+                              return _vm.editContact(contact)
+                            }
+                          }
+                        },
+                        [_vm._v("Edit")]
+                      ),
+                      _vm._v(" "),
+                      _c(
+                        "button",
+                        {
+                          staticClass: "btn btn-sm btn-danger",
+                          on: {
+                            click: function($event) {
+                              return _vm.deleteContact(contact)
+                            }
+                          }
+                        },
+                        [_vm._v("Delete")]
+                      )
+                    ]
                   )
-                ]
-              )
-            ])
-          }),
-          0
-        )
-      ])
+                ])
+              }),
+              0
+            )
+          ])
+        : _c("h3", { staticClass: "text-danger text-center" }, [
+            _vm._v("Nothing found!")
+          ])
     ]
   )
 }
@@ -37096,7 +37151,7 @@ var render = function() {
     },
     [
       _c("div", { staticClass: "card-header" }, [
-        _c("span", [_vm._v("Create New")]),
+        _c("span", [_vm._v("Create New " + _vm._s(_vm.response))]),
         _vm._v(" "),
         _c(
           "button",
@@ -37117,12 +37172,66 @@ var render = function() {
         {
           staticClass: "form-inline text-center",
           staticStyle: { padding: "20px 30px" },
-          attrs: { action: "/action_page.php" }
+          attrs: { action: "javascript:;" }
         },
         [
-          _vm._m(0),
+          _c("div", { staticClass: "form-group" }, [
+            _c("input", {
+              directives: [
+                {
+                  name: "model",
+                  rawName: "v-model",
+                  value: _vm.name,
+                  expression: "name"
+                }
+              ],
+              staticClass: "form-control",
+              attrs: {
+                type: "text",
+                id: "name",
+                placeholder: "Enter name",
+                name: "name"
+              },
+              domProps: { value: _vm.name },
+              on: {
+                input: function($event) {
+                  if ($event.target.composing) {
+                    return
+                  }
+                  _vm.name = $event.target.value
+                }
+              }
+            })
+          ]),
           _vm._v(" "),
-          _vm._m(1),
+          _c("div", { staticClass: "form-group" }, [
+            _c("input", {
+              directives: [
+                {
+                  name: "model",
+                  rawName: "v-model",
+                  value: _vm.email,
+                  expression: "email"
+                }
+              ],
+              staticClass: "form-control",
+              attrs: {
+                type: "email",
+                id: "email",
+                placeholder: "Enter email",
+                name: "email"
+              },
+              domProps: { value: _vm.email },
+              on: {
+                input: function($event) {
+                  if ($event.target.composing) {
+                    return
+                  }
+                  _vm.email = $event.target.value
+                }
+              }
+            })
+          ]),
           _vm._v(" "),
           _c(
             "button",
@@ -37138,40 +37247,7 @@ var render = function() {
     ]
   )
 }
-var staticRenderFns = [
-  function() {
-    var _vm = this
-    var _h = _vm.$createElement
-    var _c = _vm._self._c || _h
-    return _c("div", { staticClass: "form-group" }, [
-      _c("input", {
-        staticClass: "form-control",
-        attrs: {
-          type: "text",
-          id: "name",
-          placeholder: "Enter name",
-          name: "name"
-        }
-      })
-    ])
-  },
-  function() {
-    var _vm = this
-    var _h = _vm.$createElement
-    var _c = _vm._self._c || _h
-    return _c("div", { staticClass: "form-group" }, [
-      _c("input", {
-        staticClass: "form-control",
-        attrs: {
-          type: "email",
-          id: "email",
-          placeholder: "Enter email",
-          name: "email"
-        }
-      })
-    ])
-  }
-]
+var staticRenderFns = []
 render._withStripped = true
 
 
@@ -37204,7 +37280,7 @@ var render = function() {
     },
     [
       _c("div", { staticClass: "card-header" }, [
-        _c("span", [_vm._v("Create New")]),
+        _c("span", [_vm._v("Edit Contact")]),
         _vm._v(" "),
         _c(
           "button",
@@ -37234,19 +37310,19 @@ var render = function() {
                 {
                   name: "model",
                   rawName: "v-model",
-                  value: _vm.contact.name,
-                  expression: "contact.name"
+                  value: _vm.name,
+                  expression: "name"
                 }
               ],
               staticClass: "form-control",
               attrs: { type: "text", placeholder: "Enter name", name: "name" },
-              domProps: { value: _vm.contact.name },
+              domProps: { value: _vm.name },
               on: {
                 input: function($event) {
                   if ($event.target.composing) {
                     return
                   }
-                  _vm.$set(_vm.contact, "name", $event.target.value)
+                  _vm.name = $event.target.value
                 }
               }
             })
@@ -37258,8 +37334,8 @@ var render = function() {
                 {
                   name: "model",
                   rawName: "v-model",
-                  value: _vm.contact.email,
-                  expression: "contact.email"
+                  value: _vm.email,
+                  expression: "email"
                 }
               ],
               staticClass: "form-control",
@@ -37268,13 +37344,13 @@ var render = function() {
                 placeholder: "Enter email",
                 name: "email"
               },
-              domProps: { value: _vm.contact.email },
+              domProps: { value: _vm.email },
               on: {
                 input: function($event) {
                   if ($event.target.composing) {
                     return
                   }
-                  _vm.$set(_vm.contact, "email", $event.target.value)
+                  _vm.email = $event.target.value
                 }
               }
             })
@@ -37282,7 +37358,11 @@ var render = function() {
           _vm._v(" "),
           _c(
             "button",
-            { staticClass: "btn btn-primary", attrs: { type: "submit" } },
+            {
+              staticClass: "btn btn-primary",
+              attrs: { type: "button" },
+              on: { click: _vm.editContact }
+            },
             [_vm._v("Submit")]
           )
         ]
