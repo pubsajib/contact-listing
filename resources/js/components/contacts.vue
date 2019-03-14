@@ -1,6 +1,10 @@
 <template>
     <div class="card" style="margin-bottom: 20px;">
-        <div class="card-header"><span>Contacts List ( <strong>{{ contacts.length }}</strong> ) </span> <button class="btn btn-sm btn-primary float-right" @click="createContact">Create</button></div>
+        <div class="card-header">
+            <span>Contacts List ( <strong>{{ contacts.length }}</strong> ) 
+            <span v-if="messageMsg" class="message text-center"><span :class="messageCls">{{ messageMsg }}</span></span>
+            </span> <button class="btn btn-sm btn-primary float-right" @click="createContact">Create</button>
+        </div>
         <table v-if="contacts.length" class="table table-dark table-hover">
             <thead>
                 <tr>
@@ -29,22 +33,28 @@
             return {
                 contacts: '',
                 contact: '',
+                messageCls: '',
+                messageMsg: '',
             }
         },
         mounted() { 
-            Bus.$on('fetchallusers', this.showAllUsers());
+            let object = this
+            Bus.$on('fetchallusers', function(status) { object.showAllUsers(status); });
         },
         created(){
             this.showAllUsers();
         },
         methods: {
-            showAllUsers(){
+            showAllUsers(message={}){
                 let object = this;
                 axios.get('api/user')
                     .then(function(response) { 
                         if (response.status == 200) {
-                            object.contacts = response.data; 
-                            // console.log(response.data); 
+                            object.contacts = response.data;
+                            if (message.hasOwnProperty('msg')) {
+                                object.messageMsg = message.msg;
+                                object.messageCls = message.cls;
+                            }
                         }
                     })
                     .catch(function(error) { console.log(error); }); 
@@ -61,7 +71,11 @@
                     .then(function(response) { 
                         if (response.status == 200) {
                             let index = object.contacts.indexOf(contact);
-                            if (index > -1) object.contacts.splice(index, 1);
+                            if (index > -1) {
+                                object.contacts.splice(index, 1);
+                                object.messageMsg = 'Deleted.';
+                                object.messageCls = 'text-danger';
+                            }
                         }
                     })
                     .catch(function(error) { console.log(error); });

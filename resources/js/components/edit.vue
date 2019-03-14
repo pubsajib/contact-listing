@@ -1,14 +1,14 @@
 <template>
     <div v-show="edit" class="card" style="margin-bottom: 20px;">
         <div class="card-header"><span>Edit Contact</span> <button class="btn btn-sm btn-danger float-right" @click="edit=false">Cancel</button></div>
-        <form class="form-inline text-center" action="" style="padding: 20px 30px;">
+        <form @submit.prevent="editContact" class="form-inline text-center" style="padding: 20px 30px;">
             <div class="form-group">
                 <input type="text" class="form-control" v-model="name" placeholder="Enter name" name="name">
             </div>
             <div class="form-group">
                 <input type="email" class="form-control" v-model="email" placeholder="Enter email" name="email">
             </div>
-            <button type="button" class="btn btn-primary" @click="editContact">Submit</button>
+            <button type="submit" class="btn btn-primary">Submit</button>
         </form>
     </div>
 </template>
@@ -38,8 +38,16 @@
             },
             editContact(){
                 let object = this;
-                axios.put('/api/user/'+ this.id, {name: this.name, email: this.email}).then(function(response) {
-                    console.log(response.status);
+                axios.put('/api/user/'+ object.id, {
+                    name: object.name, 
+                    email: object.email
+                }).then(function(response) {
+                    if (response.status == 200) {
+                        object.name = '';
+                        object.email = '';
+                        Bus.$emit('fetchallusers', {cls:'text-info', msg: 'Updated successfully.'});
+                        object.edit = false;
+                    }
                 }).catch(function(error) {
                     console.log(error);
                 })

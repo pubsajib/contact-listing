@@ -1788,25 +1788,40 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
+//
+//
+//
 /* harmony default export */ __webpack_exports__["default"] = ({
   data: function data() {
     return {
       contacts: '',
-      contact: ''
+      contact: '',
+      messageCls: '',
+      messageMsg: ''
     };
   },
   mounted: function mounted() {
-    Bus.$on('fetchallusers', this.showAllUsers());
+    var object = this;
+    Bus.$on('fetchallusers', function (status) {
+      object.showAllUsers(status);
+    });
   },
   created: function created() {
     this.showAllUsers();
   },
   methods: {
     showAllUsers: function showAllUsers() {
+      var message = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var object = this;
       axios.get('api/user').then(function (response) {
         if (response.status == 200) {
-          object.contacts = response.data; // console.log(response.data); 
+          object.contacts = response.data;
+
+          if (message.hasOwnProperty('msg')) {
+            object.messageMsg = message.msg;
+            object.messageCls = message.cls;
+          }
         }
       }).catch(function (error) {
         console.log(error);
@@ -1823,7 +1838,12 @@ __webpack_require__.r(__webpack_exports__);
       axios.delete('/api/user/' + contact.id).then(function (response) {
         if (response.status == 200) {
           var index = object.contacts.indexOf(contact);
-          if (index > -1) object.contacts.splice(index, 1);
+
+          if (index > -1) {
+            object.contacts.splice(index, 1);
+            object.messageMsg = 'Deleted.';
+            object.messageCls = 'text-danger';
+          }
         }
       }).catch(function (error) {
         console.log(error);
@@ -1860,6 +1880,10 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
+//
+//
+//
 /* harmony default export */ __webpack_exports__["default"] = ({
   data: function data() {
     return {
@@ -1867,7 +1891,8 @@ __webpack_require__.r(__webpack_exports__);
       email: '',
       password: '',
       createNew: false,
-      response: ''
+      messageCls: '',
+      messageMsg: ''
     };
   },
   mounted: function mounted() {
@@ -1887,7 +1912,6 @@ __webpack_require__.r(__webpack_exports__);
     createContact: function createContact(e) {
       e.preventDefault();
       var object = this;
-      var state = Bus;
       axios.post('api/user', {
         name: object.name,
         email: object.email,
@@ -1895,12 +1919,18 @@ __webpack_require__.r(__webpack_exports__);
         password_confirmation: '123456'
       }).then(function (response) {
         if (response.status == 200) {
-          // location.reload();
-          state.$emit('fetchallusers');
+          object.name = '';
+          object.email = '';
+          Bus.$emit('fetchallusers', {
+            cls: 'text-primary',
+            msg: 'Created successfully.'
+          });
+          object.createNew = false;
         } // object.response = response.data;
 
       }).catch(function (error) {
-        object.response = error;
+        object.messageMsg = error;
+        object.messageCls = 'text-danger';
       });
     },
     test: function test() {
@@ -1962,11 +1992,19 @@ __webpack_require__.r(__webpack_exports__);
     },
     editContact: function editContact() {
       var object = this;
-      axios.put('/api/user/' + this.id, {
-        name: this.name,
-        email: this.email
+      axios.put('/api/user/' + object.id, {
+        name: object.name,
+        email: object.email
       }).then(function (response) {
-        console.log(response.status);
+        if (response.status == 200) {
+          object.name = '';
+          object.email = '';
+          Bus.$emit('fetchallusers', {
+            cls: 'text-info',
+            msg: 'Updated successfully.'
+          });
+          object.edit = false;
+        }
       }).catch(function (error) {
         console.log(error);
       });
@@ -37029,7 +37067,14 @@ var render = function() {
         _c("span", [
           _vm._v("Contacts List ( "),
           _c("strong", [_vm._v(_vm._s(_vm.contacts.length))]),
-          _vm._v(" ) ")
+          _vm._v(" ) \n        "),
+          _vm.messageMsg
+            ? _c("span", { staticClass: "message text-center" }, [
+                _c("span", { class: _vm.messageCls }, [
+                  _vm._v(_vm._s(_vm.messageMsg))
+                ])
+              ])
+            : _vm._e()
         ]),
         _vm._v(" "),
         _c(
@@ -37151,7 +37196,15 @@ var render = function() {
     },
     [
       _c("div", { staticClass: "card-header" }, [
-        _c("span", [_vm._v("Create New " + _vm._s(_vm.response))]),
+        _c("span", [_vm._v("Create New")]),
+        _vm._v(" "),
+        _vm.messageMsg
+          ? _c("span", { staticClass: "message text-center" }, [
+              _c("span", { class: _vm.messageCls }, [
+                _vm._v(_vm._s(_vm.messageMsg))
+              ])
+            ])
+          : _vm._e(),
         _vm._v(" "),
         _c(
           "button",
@@ -37172,7 +37225,12 @@ var render = function() {
         {
           staticClass: "form-inline text-center",
           staticStyle: { padding: "20px 30px" },
-          attrs: { action: "javascript:;" }
+          on: {
+            submit: function($event) {
+              $event.preventDefault()
+              return _vm.createContact($event)
+            }
+          }
         },
         [
           _c("div", { staticClass: "form-group" }, [
@@ -37235,11 +37293,7 @@ var render = function() {
           _vm._v(" "),
           _c(
             "button",
-            {
-              staticClass: "btn btn-primary",
-              attrs: { type: "button" },
-              on: { click: _vm.createContact }
-            },
+            { staticClass: "btn btn-primary", attrs: { type: "submit" } },
             [_vm._v("Submit")]
           )
         ]
@@ -37301,7 +37355,12 @@ var render = function() {
         {
           staticClass: "form-inline text-center",
           staticStyle: { padding: "20px 30px" },
-          attrs: { action: "" }
+          on: {
+            submit: function($event) {
+              $event.preventDefault()
+              return _vm.editContact($event)
+            }
+          }
         },
         [
           _c("div", { staticClass: "form-group" }, [
@@ -37358,11 +37417,7 @@ var render = function() {
           _vm._v(" "),
           _c(
             "button",
-            {
-              staticClass: "btn btn-primary",
-              attrs: { type: "button" },
-              on: { click: _vm.editContact }
-            },
+            { staticClass: "btn btn-primary", attrs: { type: "submit" } },
             [_vm._v("Submit")]
           )
         ]
